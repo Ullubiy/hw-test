@@ -1,4 +1,4 @@
-module github.com/Ullubiy/hw-test
+module github.com/Ullubiy/hw-test/hw01_hello_otus
 
 go 1.22.2
 
