@@ -33,7 +33,7 @@ func Unpack(s string) (string, error) {
 			count = 1
 		}
 
-		if count == 0 || count > MaxLettersCount {
+		if count == 0 || count < MaxLettersCount {
 			return "", ErrInvalidString
 		}
 
