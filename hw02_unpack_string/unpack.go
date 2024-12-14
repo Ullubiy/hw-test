@@ -37,9 +37,11 @@ func workWithDigit(i int, str []rune, v rune, result *strings.Builder) (*strings
 		return nil, ErrInvalidString
 	}
 	if b == 0 {
-		size := result.Len()
+		outputRunes := []rune(result.String())
 		result.Reset()
-		result.WriteString(string(str[:size-1]))
+		if len(outputRunes) > 0 {
+			result.WriteString(string(outputRunes[:len(outputRunes)-1]))
+		}
 	} else {
 		g = strings.Repeat(string(str[i-1]), b-1)
 		result.WriteString(g)
