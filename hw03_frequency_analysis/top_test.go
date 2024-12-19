@@ -79,4 +79,9 @@ func TestTop10(t *testing.T) {
 			require.ElementsMatch(t, expected, Top10(text))
 		}
 	})
+	t.Run("Whitespace ignoring", func(t *testing.T) {
+		text = "Больше одного пробела         подряд"
+		expected := []string{"Больше", "одного", "пробела", "подряд"}
+		require.ElementsMatch(t, expected, Top10(text))
+	})
 }
