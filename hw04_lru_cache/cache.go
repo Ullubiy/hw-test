@@ -1,6 +1,9 @@
 package hw04lrucache
 
-import "fmt"
+import (
+	"fmt"
+	"sync"
+)
 
 type Key string
 
@@ -11,6 +14,7 @@ type Cache interface {
 }
 
 type lruCache struct {
+	*sync.Mutex
 	capacity int
 	queue    List
 	items    map[Key]*ListItem
@@ -71,11 +75,10 @@ func (l lruCache) Get(key Key) (interface{}, bool) {
 	return nil, false
 }
 
-func (l lruCache) Clear() {
-	for k, v := range l.items {
-		var j = l.items[k].Value
-		i := j.(cacheItem)
-		delete(l.items, i.key)
-		l.queue.Remove(v)
-	}
+func (l *lruCache) Clear() {
+	l.Lock()
+	defer l.Unlock()
+
+	l.queue = NewList()
+	l.items = map[Key]*ListItem{}
 }
