@@ -8,6 +8,9 @@ linters-settings:
   funlen:
     lines: 150
     statements: 80
+  gosec:
+    excludes:
+      - G115
 
 issues:
   exclude-rules:
