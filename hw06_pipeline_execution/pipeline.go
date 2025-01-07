@@ -1,42 +1,50 @@
+// Package hw06pipelineexecution provides a pipeline execution function
 package hw06pipelineexecution
 
 type (
-	In  = <-chan interface{}
+	// In is read only channel for input data.
+	In = <-chan interface{}
+	// Out is read only channel for output results.
 	Out = In
-	Bi  = chan interface{}
+	// Bi is a read/write channel.
+	Bi = chan interface{}
 )
 
+// Stage is a pipeline stage function, which takes data from read only channel "in"
+// and return results to read only channel "out".
 type Stage func(in In) (out Out)
 
-func ExecutePipeline(in In, done In, stages ...Stage) Out {
-	for _, stage := range stages {
-		out := make(Bi)
-		go wrapper(in, done, out)
-
-		in = stage(out)
-	}
-	return in
-}
-
-func wrapper(in In, done In, out Bi) {
-	defer close(out)
-	for {
-		select {
-		case <-done:
-			// It appears that without this one TestAllStageStop stucks on first stages,
-			//  trying to send additional data to the channel no one reads
-			<-in
-			return
-		case i, ok := <-in:
-			if !ok {
-				return
+func check(done In, in In) Out {
+	out := make(Bi)
+	go func() {
+		defer func() {
+			close(out)
+			for range out {
+				_ = out
 			}
+			for range in {
+				_ = in
+			}
+		}()
+		for {
 			select {
 			case <-done:
-				<-in
 				return
-			case out <- i:
+			case v, ok := <-in:
+				if !ok {
+					return
+				}
+				out <- v
 			}
 		}
+	}()
+	return out
+}
+
+// ExecutePipeline starts pipeline executing stages in order.
+func ExecutePipeline(in In, done In, stages ...Stage) Out {
+	for _, stage := range stages {
+		in = stage(check(done, in))
 	}
+	return in
 }
