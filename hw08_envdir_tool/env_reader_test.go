@@ -1,125 +1,36 @@
 package main
 
 import (
-	"fmt"
-	"log"
-	"os"
-	"reflect"
+	"errors"
 	"testing"
 
-	"github.com/dchest/safefile"
-	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func TestReadDir(t *testing.T) {
-	t.Run("чтение файла из директории", func(t *testing.T) {
-		err := os.Mkdir("/tmp/testdir", 0755)
-		defer os.RemoveAll("/tmp/testdir")
-		if err != nil {
-			fmt.Println(err)
-		}
-
-		tmpfile, err := safefile.Create("/tmp/testdir/S.txt", 0755)
-		if err != nil {
-			fmt.Println(err)
-		}
-		defer tmpfile.Close()
-
-		content := []byte("temporary")
-		if _, err := tmpfile.Write(content); err != nil {
-			log.Fatal(err)
-		}
-
-		if err := tmpfile.Commit(); err != nil {
-			log.Fatal(err)
-		}
-
-		var actual Environment
-		actual, err = ReadDir("/tmp/testdir")
-		if err != nil {
-			fmt.Println(err)
-		}
-		for k, v := range actual {
-			actual[k] = v
-		}
-		var expected Environment
-		expected = map[string]string{
-			"S.txt": "temporary",
-		}
-		result := reflect.DeepEqual(expected, actual)
-		assert.True(t, result)
+	t.Run("simple read env from dir", func(t *testing.T) {
+		envs, err := ReadDir("testdata/env")
+		require.NoError(t, err)
+		require.Equal(t, Environment{
+			"BAR":   EnvValue{"bar", false},
+			"EMPTY": EnvValue{"", false},
+			"FOO":   EnvValue{"   foo\nwith new line", false},
+			"HELLO": EnvValue{"\"hello\"", false},
+			"UNSET": EnvValue{"", true},
+		}, envs)
 	})
 
-	t.Run("чтение невалидного файла", func(t *testing.T) {
-		err := os.Mkdir("/tmp/testdir", 0755)
-		defer os.RemoveAll("/tmp/testdir")
-		if err != nil {
-			fmt.Println(err)
-		}
-		tmpfile, err := safefile.Create("/tmp/testdir/S=q.txt", 0755)
-		if err != nil {
-			fmt.Println(err)
-		}
-		defer tmpfile.Close()
-
-		content := []byte("temporary")
-		if _, err := tmpfile.Write(content); err != nil {
-			log.Fatal(err)
-		}
-
-		if err := tmpfile.Commit(); err != nil {
-			log.Fatal(err)
-		}
-
-		var actual Environment
-		actual, err = ReadDir("/tmp/testdir")
-		if err != nil {
-			fmt.Println(err)
-		}
-		for k, v := range actual {
-			actual[k] = v
-		}
-		var expected Environment
-		expected = map[string]string{}
-
-		result := reflect.DeepEqual(expected, actual)
-		assert.True(t, result)
+	t.Run("special read env from dir", func(t *testing.T) {
+		envs, err := ReadDir("testdata/envspec")
+		require.NoError(t, err)
+		require.Equal(t, Environment{
+			"NBSP": EnvValue{"spaces and tabs should be removed at the end of the line," +
+				" but e.g. nbsp is allowed: \u00A0\u00A0", false},
+		}, envs)
 	})
 
-	t.Run("чтение файла состоящего из нескольких строк", func(t *testing.T) {
-		err := os.Mkdir("/tmp/testdir", 0755)
-		defer os.RemoveAll("/tmp/testdir")
-		if err != nil {
-			fmt.Println(err)
-		}
-		tmpfile, err := safefile.Create("/tmp/testdir/file.txt", 0755)
-		if err != nil {
-			fmt.Println(err)
-		}
-		defer tmpfile.Close()
-
-		content1 := []byte("the first line\nthe second line\nthe third line")
-		if _, err := tmpfile.Write(content1); err != nil {
-			log.Fatal(err)
-		}
-
-		if err := tmpfile.Commit(); err != nil {
-			log.Fatal(err)
-		}
-
-		var actual Environment
-		actual, err = ReadDir("/tmp/testdir")
-		if err != nil {
-			fmt.Println(err)
-		}
-		for k, v := range actual {
-			actual[k] = v
-		}
-		var expected Environment
-		expected = map[string]string{
-			"file.txt": "the first line",
-		}
-		result := reflect.DeepEqual(expected, actual)
-		assert.True(t, result)
+	t.Run("error env name", func(t *testing.T) {
+		_, err := ReadDir("testdata/enverr")
+		require.Truef(t, errors.Is(err, ErrInvalidEnvName), "actual error %q", err)
 	})
 }

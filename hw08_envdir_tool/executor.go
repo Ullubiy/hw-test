@@ -1,8 +1,8 @@
 package main
 
 import (
-	"bytes"
-	"fmt"
+	"errors"
+	"log"
 	"os"
 	"os/exec"
 	"strings"
@@ -10,26 +10,41 @@ import (
 
 // RunCmd runs a command + arguments (cmd) with environment variables from env.
 func RunCmd(cmd []string, env Environment) (returnCode int) {
-	for i := 0; i < len(env); i++ {
-		for k, v := range env {
-			v = string(bytes.ReplaceAll([]byte(v), []byte("\x00"), []byte("\n")))
-			v = strings.TrimRight(v, "\t")
-			os.Setenv(k, v)
-			if v == "" {
-				os.Unsetenv(k)
-			}
-			i++
+	execCmd := exec.Command(cmd[0], cmd[1:]...) // #nosec G204
+	execCmd.Stdin = os.Stdin
+	execCmd.Stdout = os.Stdout
+	execCmd.Stderr = os.Stderr
+	execCmd.Env = getEnv(execCmd.Environ(), env)
+	err := execCmd.Run()
+	if err != nil {
+		var exit *exec.ExitError
+		if errors.As(err, &exit); exit != nil {
+			return exit.ExitCode()
 		}
-	}
-
-	cm := exec.Command(cmd[0], cmd[1:]...) //nolint:gosec
-
-	cm.Stdout = os.Stdout
-	if err := cm.Run(); err != nil {
-		fmt.Println(err)
-		os.Stderr.WriteString(err.Error())
+		log.Printf("execution error: %+v\n", err)
 		return 1
 	}
-
 	return 0
+}
+
+func getEnv(oldEnv []string, addEnv Environment) []string {
+	newEnv := []string{}
+	// take all old env variables excluding those that need to be removed
+	for _, env := range oldEnv {
+		idx := strings.Index(env, "=")
+		if idx == -1 {
+			continue
+		}
+		if v, ok := addEnv[env[:idx]]; ok && v.NeedRemove {
+			continue
+		}
+		newEnv = append(newEnv, env)
+	}
+	// adding new env variables
+	for k, v := range addEnv {
+		if !v.NeedRemove {
+			newEnv = append(newEnv, k+"="+v.Value)
+		}
+	}
+	return newEnv
 }
