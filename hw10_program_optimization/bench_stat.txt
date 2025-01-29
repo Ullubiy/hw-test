@@ -1,0 +1,15 @@
+goos: linux
+goarch: amd64
+pkg: github.com/Ullubiy/hw-test/hw10_program_optimization
+cpu: 12th Gen Intel(R) Core(TM) i5-1240P
+                 │ bench_new.txt │         bench_old.txt         │
+                 │    sec/op     │   sec/op     vs base          │
+GetDomainStat-16     113.9m ± 1%   115.2m ± 3%  ~ (p=0.075 n=10)
+
+                 │ bench_new.txt │         bench_old.txt          │
+                 │     B/op      │     B/op      vs base          │
+GetDomainStat-16    28.09Mi ± 0%   28.09Mi ± 0%  ~ (p=1.000 n=10)
+
+                 │ bench_new.txt │         bench_old.txt         │
+                 │   allocs/op   │  allocs/op   vs base          │
+GetDomainStat-16     723.2k ± 0%   723.2k ± 0%  ~ (p=0.987 n=10)
