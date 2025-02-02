@@ -62,4 +62,151 @@ func TestTelnetClient(t *testing.T) {
 
 		wg.Wait()
 	})
+
+	t.Run("bad_connect", func(t *testing.T) {
+		in := &bytes.Buffer{}
+		out := &bytes.Buffer{}
+		client := NewTelnetClient("localhost:4242", 1*time.Second, io.NopCloser(in), out)
+
+		require.EqualError(t, client.Connect(), "dial tcp [::1]:4242: connect: connection refused")
+	})
+
+	t.Run("without_connect", func(t *testing.T) {
+		in := &bytes.Buffer{}
+		out := &bytes.Buffer{}
+		client := NewTelnetClient("localhost:4242", 5*time.Second, io.NopCloser(in), out)
+
+		require.ErrorIs(t, client.Send(), ErrConnNotEstablish)
+		require.ErrorIs(t, client.Receive(), ErrConnNotEstablish)
+		require.NoError(t, client.Close())
+	})
+
+	t.Run("close_listen", func(t *testing.T) {
+		l, err := net.Listen("tcp", "127.0.0.1:")
+		require.NoError(t, err)
+
+		in := &bytes.Buffer{}
+		out := &bytes.Buffer{}
+
+		timeout, err := time.ParseDuration("1s")
+		require.NoError(t, err)
+
+		client := NewTelnetClient(l.Addr().String(), timeout, io.NopCloser(in), out)
+		require.NoError(t, client.Connect())
+		defer func() { require.NoError(t, client.Close()) }()
+
+		l.Close()
+
+		conn := client.(*telnetClient).conn
+
+		in.WriteString("hello\n")
+		require.EqualError(t, client.Send(),
+			"write tcp "+conn.LocalAddr().String()+"->"+conn.RemoteAddr().String()+": write: connection reset by peer")
+
+		// при получении возращает EOF, который перехватывается т.к. трактуется как корректное окончание
+		require.NoError(t, client.Receive())
+	})
+}
+
+var testParamData = []struct {
+	name    string
+	args    []string
+	timeout time.Duration
+	host    string
+	port    int
+	err     string
+}{
+	{
+		name: "parseArgs_success",
+		args: []string{
+			"--timeout=5s",
+			"localhost",
+			"12345",
+		},
+		timeout: 5 * time.Second,
+		host:    "localhost",
+		port:    12345,
+		err:     "",
+	},
+	{
+		name: "parseArgs_success_without_timeout",
+		args: []string{
+			"localhost",
+			"12345",
+		},
+		timeout: 10 * time.Second,
+		host:    "localhost",
+		port:    12345,
+		err:     "",
+	},
+	{
+		name: "parseArgs_bad_timeout",
+		args: []string{
+			"--timeout=5ass",
+			"localhost",
+			"12345",
+		},
+		timeout: 5 * time.Second,
+		host:    "",
+		port:    0,
+		err:     `parse args error: invalid value "5ass" for flag -timeout: parse error`,
+	},
+	{
+		name: "parseArgs_bad_args_count",
+		args: []string{
+			"--timeout=5s",
+			"localhost",
+		},
+		timeout: 5 * time.Second,
+		host:    "",
+		port:    0,
+		err:     "parse args error: not enough arguments",
+	},
+	{
+		name: "parseArgs_invalid_host",
+		args: []string{
+			"--timeout=5s",
+			"domain/localhost",
+			"123",
+		},
+		timeout: 5 * time.Second,
+		host:    "",
+		port:    0,
+		err:     "parse args error host: string \"domain/localhost\" cannot be a host name or address",
+	},
+	{
+		name: "parseArgs_invalid_port",
+		args: []string{
+			"--timeout=5s",
+			"localhost",
+			"a123",
+		},
+		timeout: 5 * time.Second,
+		host:    "localhost",
+		port:    0,
+		err:     "parse args error port: strconv.Atoi: parsing \"a123\": invalid syntax",
+	},
+}
+
+func TestParseArgs(t *testing.T) {
+	for _, data := range testParamData {
+		t.Run(data.name, func(t *testing.T) {
+			var (
+				timeout time.Duration
+				host    string
+				port    int
+			)
+
+			err := parseArgs(data.args, &timeout, &host, &port)
+
+			if data.err != "" {
+				require.EqualError(t, err, data.err)
+			} else {
+				require.NoError(t, err)
+			}
+
+			require.Equal(t, data.host, host)
+			require.Equal(t, data.port, port)
+		})
+	}
 }
