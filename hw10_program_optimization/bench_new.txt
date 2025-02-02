@@ -1,0 +1,16 @@
+goos: linux
+goarch: amd64
+pkg: github.com/Ullubiy/hw-test/hw10_program_optimization
+cpu: 12th Gen Intel(R) Core(TM) i5-1240P
+BenchmarkGetDomainStat-16    	       9	 114233819 ns/op	29450659 B/op	  723159 allocs/op
+BenchmarkGetDomainStat-16    	       9	 112827347 ns/op	29450786 B/op	  723159 allocs/op
+BenchmarkGetDomainStat-16    	       9	 113142695 ns/op	29450845 B/op	  723159 allocs/op
+BenchmarkGetDomainStat-16    	       9	 113724341 ns/op	29450697 B/op	  723159 allocs/op
+BenchmarkGetDomainStat-16    	       9	 114664755 ns/op	29450576 B/op	  723158 allocs/op
+BenchmarkGetDomainStat-16    	       9	 112948799 ns/op	29450411 B/op	  723157 allocs/op
+BenchmarkGetDomainStat-16    	       9	 113099292 ns/op	29450968 B/op	  723160 allocs/op
+BenchmarkGetDomainStat-16    	       9	 114869878 ns/op	29450724 B/op	  723159 allocs/op
+BenchmarkGetDomainStat-16    	       9	 119293731 ns/op	29450264 B/op	  723156 allocs/op
+BenchmarkGetDomainStat-16    	       9	 114005150 ns/op	29450637 B/op	  723158 allocs/op
+PASS
+ok  	github.com/Ullubiy/hw-test/hw10_program_optimization	14.307s
